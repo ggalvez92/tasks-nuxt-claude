@@ -51,20 +51,12 @@ export default defineNuxtConfig({
       options: {
         target: 'esnext'
       }
-    },
-    externals: {
-      inline: ['class-variance-authority']
     }
   },
 
   vite: {
     optimizeDeps: {
-      exclude: ['class-variance-authority']
-    },
-    build: {
-      rollupOptions: {
-        external: ['class-variance-authority']
-      }
+      include: ['class-variance-authority']
     }
   },
 
