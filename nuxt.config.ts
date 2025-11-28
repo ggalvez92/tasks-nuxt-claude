@@ -6,7 +6,7 @@ export default defineNuxtConfig({
   css: ["~/assets/css/tailwind.css"],
   components: [
     {
-      path: '~/shared/components',
+      path: '~/components',
       pathPrefix: false,
       global: true
     },
@@ -14,10 +14,6 @@ export default defineNuxtConfig({
       path: '~/features',
       pathPrefix: false,
       extensions: ['vue']
-    },
-    {
-      path: '~/components',
-      pathPrefix: false
     }
   ],
   runtimeConfig: {
@@ -49,4 +45,30 @@ export default defineNuxtConfig({
     },
     // Si quieres proteger todo por defecto: globalAppMiddleware: true
   },
+
+  nitro: {
+    esbuild: {
+      options: {
+        target: 'esnext'
+      }
+    },
+    externals: {
+      inline: ['class-variance-authority']
+    }
+  },
+
+  vite: {
+    optimizeDeps: {
+      exclude: ['class-variance-authority']
+    },
+    build: {
+      rollupOptions: {
+        external: ['class-variance-authority']
+      }
+    }
+  },
+
+  experimental: {
+    componentIslands: false
+  }
 });
