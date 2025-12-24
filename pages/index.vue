@@ -174,6 +174,19 @@
       :current-filter="currentFilter"
       @apply="handleApplyFilter"
     />
+
+    <!-- Voice Task Modal -->
+    <VoiceTaskModal
+      v-model:open="showVoiceTaskModal"
+      @task-created="handleVoiceTaskCreated"
+      @close="showVoiceTaskModal = false"
+    />
+
+    <!-- Floating Voice Button -->
+    <FloatingVoiceButton
+      @open-modal="showVoiceTaskModal = true"
+      @quick-record-complete="handleQuickVoiceRecord"
+    />
   </div>
 </template>
 
@@ -181,7 +194,7 @@
 import { Plus, ChevronLeft, ChevronRight, ListTodo, CheckCircle, Clock, Circle, Filter, BarChart3, FolderOpen, LogOut } from 'lucide-vue-next'
 import { formatDate, formatRelativeDate } from '~/shared/utils'
 import { isToday } from 'date-fns'
-import type { Task, TaskFilter, UpdateTaskInput, TaskStatus } from '~/shared/types'
+import type { Task, TaskFilter, UpdateTaskInput, TaskStatus, CreateTaskInput } from '~/shared/types'
 
 definePageMeta({
   middleware: ['auth']
@@ -200,7 +213,46 @@ onMounted(async () => {
 const { filteredTasks, currentFilter, selectedDate, todayTasks, loading, error } = storeToRefs(tasksStore)
 const showCreateTaskModal = ref(false)
 const showFilterModal = ref(false)
+const showVoiceTaskModal = ref(false)
 const editingTask = ref<Task | null>(null)
+
+// Voice task handling
+const voiceTaskApi = useVoiceTaskApi()
+
+async function handleVoiceTaskCreated(taskData: CreateTaskInput) {
+  await tasksStore.createTask(taskData)
+}
+
+async function handleQuickVoiceRecord(audioBlob: Blob) {
+  try {
+    const result = await voiceTaskApi.processVoiceToTask(audioBlob, categoriesStore.categories)
+
+    // If high confidence and has category, create directly
+    if (result.parsedTask.confidence > 0.8 && result.parsedTask.categoryName) {
+      const category = categoriesStore.categories.find(
+        c => c.name.toLowerCase() === result.parsedTask.categoryName?.toLowerCase()
+      )
+      if (category) {
+        const taskData: CreateTaskInput = {
+          title: result.parsedTask.title,
+          description: result.parsedTask.description,
+          priority: result.parsedTask.priority,
+          categoryId: category.id,
+          dueDate: result.parsedTask.dueDate ? new Date(result.parsedTask.dueDate) : undefined,
+          tags: result.parsedTask.tags,
+          estimatedTime: result.parsedTask.estimatedTime,
+        }
+        await tasksStore.createTask(taskData)
+        return
+      }
+    }
+    // Open modal for review if low confidence
+    showVoiceTaskModal.value = true
+  } catch (error) {
+    console.error('Quick voice record failed:', error)
+    showVoiceTaskModal.value = true
+  }
+}
 
 // Date navigation
 function previousDay() {

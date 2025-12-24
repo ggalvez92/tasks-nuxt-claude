@@ -15,11 +15,31 @@
           <!-- Title -->
           <div class="space-y-2">
             <label class="text-sm font-medium">Título *</label>
-            <Input
-              v-model="form.title"
-              placeholder="Ingresa el título de la tarea"
-              required
-            />
+            <div class="flex gap-2">
+              <Input
+                v-model="form.title"
+                placeholder="Ingresa el título de la tarea"
+                required
+                class="flex-1"
+              />
+              <!-- Voice Record Button -->
+              <VoiceRecordButton
+                v-if="!isEditing"
+                variant="outline"
+                size="default"
+                :show-duration="false"
+                :disabled="isProcessingVoice"
+                @recording-complete="handleVoiceRecording"
+                @error="handleVoiceError"
+              />
+            </div>
+            <!-- Voice processing indicator -->
+            <p v-if="isProcessingVoice" class="text-sm text-muted-foreground flex items-center gap-2">
+              <Loader2 class="h-3 w-3 animate-spin" />
+              Procesando audio...
+            </p>
+            <!-- Voice error message -->
+            <p v-if="voiceError" class="text-sm text-destructive">{{ voiceError }}</p>
           </div>
 
           <!-- Description -->
@@ -142,7 +162,7 @@
 </template>
 
 <script setup lang="ts">
-import { X } from 'lucide-vue-next'
+import { X, Loader2 } from 'lucide-vue-next'
 import type { Task, TaskPriority, CreateTaskInput } from '~/shared/types'
 
 interface Props {
@@ -175,6 +195,56 @@ const form = reactive({
 
 const dueDateInput = ref('')
 const newTag = ref('')
+
+// Voice recording state
+const voiceTaskApi = useVoiceTaskApi()
+const voiceError = ref<string | null>(null)
+const isProcessingVoice = ref(false)
+
+async function handleVoiceRecording(audioBlob: Blob) {
+  isProcessingVoice.value = true
+  voiceError.value = null
+
+  try {
+    const result = await voiceTaskApi.processVoiceToTask(audioBlob, categories.value)
+
+    // Populate form with parsed data
+    form.title = result.parsedTask.title
+    if (result.parsedTask.description) {
+      form.description = result.parsedTask.description
+    }
+    form.priority = result.parsedTask.priority
+
+    if (result.parsedTask.categoryName) {
+      const category = categories.value.find(
+        c => c.name.toLowerCase() === result.parsedTask.categoryName?.toLowerCase()
+      )
+      if (category) {
+        form.categoryId = category.id
+      }
+    }
+
+    if (result.parsedTask.dueDate) {
+      dueDateInput.value = new Date(result.parsedTask.dueDate).toISOString().slice(0, 16)
+    }
+
+    if (result.parsedTask.tags) {
+      form.tags = result.parsedTask.tags
+    }
+
+    if (result.parsedTask.estimatedTime) {
+      form.estimatedTime = result.parsedTask.estimatedTime
+    }
+  } catch (error: any) {
+    voiceError.value = error.message
+  } finally {
+    isProcessingVoice.value = false
+  }
+}
+
+function handleVoiceError(message: string) {
+  voiceError.value = message
+}
 
 // Watch for task changes to populate form
 watch(() => props.task, (task) => {

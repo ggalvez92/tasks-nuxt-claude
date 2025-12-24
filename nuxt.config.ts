@@ -23,6 +23,10 @@ export default defineNuxtConfig({
     // googleClientId: process.env.GOOGLE_CLIENT_ID,
     // googleClientSecret: process.env.GOOGLE_SECRET_KEY,
     // backendBaseUrl: process.env.BACKEND_URL,
+    // OpenAI Configuration for Voice Tasks
+    openaiApiKey: process.env.OPENAI_API_KEY,
+    openaiModel: process.env.OPENAI_MODEL || 'gpt-4-turbo-preview',
+    openaiWhisperModel: process.env.OPENAI_WHISPER_MODEL || 'whisper-1',
     public: {
       // URL del backend de autenticación (público, accesible desde el cliente)
       backendApiUrl: process.env.NUXT_PUBLIC_BACKEND_API_URL,
